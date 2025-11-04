@@ -1,114 +1,137 @@
 import * as THREE from 'three'
-import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
+// import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
 import GUI from 'lil-gui'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
 import { DRACOLoader } from 'three/examples/jsm/loaders/DRACOLoader.js'
-import { instance, modelViewMatrix } from 'three/tsl'
 import { gsap } from "gsap";
+import { Octree } from 'three/addons/math/Octree.js'
+import { Capsule } from 'three/addons/math/Capsule.js'
 
 /**
- * Base
+ * Base setup
  */
+const canvas = document.querySelector('canvas.webgl')
+const scene = new THREE.Scene()
+// const gui = new GUI()
 
+/**
+ * Loaders
+ */
 const dracoLoader = new DRACOLoader()
 dracoLoader.setDecoderPath('/draco')
 
-const gui = new GUI()
 const gltfLoader = new GLTFLoader()
 gltfLoader.setDRACOLoader(dracoLoader)
 
-// Canvas
-const canvas = document.querySelector('canvas.webgl')
-
-// Scene
-const scene = new THREE.Scene()
-
-let character = {
-  instance: null,
-  moveDistance: 3,
-  jumpHeight: 1,
-  isMoving: false,
-  moveDuration: 0.2
-}
+/**
+ * Physics constants
+ */
+const GRAVITY = 30
+const CAPSULE_RADIUS = 0.35
+const CAPSULE_HEIGHT = 1
+const JUMP_HEIGHT = 10
+const MOVE_SPEED = 5
 
 /**
- * 3D objects 
- * GLTF + DRACO + animation
- */ 
+ * Character + collider setup
+ */
+let character = {
+  instance: null,
+  isMoving: false,
+  spawnPosition : new THREE.Vector3()
+}
 
+let targetRotation = 0 // ✅ initialize safely
+
+const colliderOctree = new Octree()
+const playerCollider = new Capsule(
+  new THREE.Vector3(0, CAPSULE_RADIUS, 0),
+  new THREE.Vector3(0, CAPSULE_HEIGHT, 0),
+  CAPSULE_RADIUS
+)
+
+let playerVelocity = new THREE.Vector3()
+let playerOnFloor = false
+
+/**
+ * Load GLTF Scene
+ */
 const intersectObjects = []
-const intersectObjectsNames = ["board","board001","board002","board003","character", "tuttle", "Snorlax", "name"]
+const intersectObjectsNames = ["board", "board001", "board002", "board003", "character", "tuttle", "Snorlax", "name"]
 
-gltfLoader.load('./models/shreeGarden/shree_man3.glb', (gltf) =>
-{
-    gltf.scene.traverse((child) => {
+gltfLoader.load('./models/shreeGarden/shree_man3.glb', (gltf) => {
+  gltf.scene.traverse((child) => {
 
-      if(intersectObjectsNames.includes(child.name)){
-        intersectObjects.push(child);
-      }
+    if (intersectObjectsNames.includes(child.name)) {
+      intersectObjects.push(child)
+    }
 
-      if (child.isMesh) {
-          child.castShadow = true
-          child.receiveShadow = true
-      }
-      if (child.name== "character"){
-        character.instance = child
-      }
+    if (child.isMesh) {
+      child.castShadow = true
+      child.receiveShadow = true
+    }
 
-    })
+    if (child.name === "character") {
 
-    gltf.scene.scale.set(0.025, 0.025, 0.025)
-    scene.add(gltf.scene)
+      character.spawnPosition.copy(child.position)
+      character.instance = child
+
+      // ✅ Initialize collider + rotation safely
+      playerCollider.start.copy(child.position).add(new THREE.Vector3(0, CAPSULE_RADIUS, 0))
+      playerCollider.end.copy(child.position).add(new THREE.Vector3(0, CAPSULE_HEIGHT, 0))
+      targetRotation = child.rotation.y
+    }
+
+    if (child.name === "ground_collider") {
+      colliderOctree.fromGraphNode(child);
+      child.visible = false
+    }
+  })
+
+  // gltf.scene.scale.set(0.25, 0.25, 0.25)
+  scene.add(gltf.scene)
 })
 
 /**
- * Lights 
+ * Lights
  */
 const ambientLight = new THREE.AmbientLight(0xffffff, 0.4)
 scene.add(ambientLight)
 
 const directionalLight = new THREE.DirectionalLight(0xffffff, 1.8)
 directionalLight.castShadow = true
-directionalLight.target.position.set(200, 0, 0)
+directionalLight.position.set(-5, 20, 5)
 directionalLight.shadow.mapSize.set(4096, 4096)
 directionalLight.shadow.camera.near = 0.5
 directionalLight.shadow.camera.far = 100
-directionalLight.shadow.camera.left = -3
-directionalLight.shadow.camera.right = 3
-directionalLight.shadow.camera.top = 3
-directionalLight.shadow.camera.bottom = -3
-directionalLight.position.set(-5, 20, 5)
-directionalLight.shadow.normalBias = 0.1
 scene.add(directionalLight)
 
-const shadowCameraHelper = new THREE.CameraHelper(directionalLight.shadow.camera)
-scene.add(shadowCameraHelper)
+// scene.add(new THREE.CameraHelper(directionalLight.shadow.camera))
 
 /**
- * Sizes
+ * Sizes + Resize
  */
 const sizes = {
-    width: window.innerWidth,
-    height: window.innerHeight,
-    viewSize: 0.5
+  width: window.innerWidth,
+  height: window.innerHeight,
+  viewSize: 0.5
 }
 
-window.addEventListener('resize', () =>
-{
-    sizes.width = window.innerWidth
-    sizes.height = window.innerHeight
+window.addEventListener('resize', () => {
+  sizes.width = window.innerWidth
+  sizes.height = window.innerHeight
 
-    const newAspectRatio = sizes.width / sizes.height
-    const viewSize = 0.5
+  const newAspectRatio = sizes.width / sizes.height
+  const viewSize = 0.5
 
-    camera.top = viewSize
-    camera.bottom = -viewSize
-    camera.left = -newAspectRatio * viewSize
-    camera.right = newAspectRatio * viewSize
-    camera.updateProjectionMatrix()
+  camera.top = viewSize
+  camera.bottom = -viewSize
+  camera.left = -newAspectRatio * viewSize
+  camera.right = newAspectRatio * viewSize
+  camera.updateProjectionMatrix()
 
-    renderer.setSize(sizes.width, sizes.height)
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
+  renderer.setSize(sizes.width, sizes.height)
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
 })
 
 /**
@@ -117,261 +140,251 @@ window.addEventListener('resize', () =>
 const raycaster = new THREE.Raycaster()
 const pointer = new THREE.Vector2()
 
+window.addEventListener('pointermove', (event) => {
+  pointer.x = (event.clientX / window.innerWidth) * 2 - 1
+  pointer.y = -(event.clientY / window.innerHeight) * 2 + 1
+})
+
 /**
- * modalcontent
+ * Modal Content + UI
  */
 const modalContent = {
-  "board":{
-    title: " project One",
-    content : "this is project One",
-    link:"https://example.com/"
-  },
-  "board001":{
-    title: " project two",
-    content : "this is project two",
-    link:"https://example.com/"
-  },
-  "board002":{
-    title: " project Three",
-    content : "this is project Three",
-    link:"https://example.com/"
-  },
-  "board003":{
-    title: " project Four",
-    content : "this is project four",
-    link:"https://example.com/"
-  },
-  "name":{
-    title : "this is name",
-    content : "shree"
-  },
-};
+  board: { title: "Project One", content: "This is project One", link: "https://example.com/" },
+  board001: { title: "Project Two", content: "This is project Two", link: "https://example.com/" },
+  board002: { title: "Project Three", content: "This is project Three", link: "https://example.com/" },
+  board003: { title: "Project Four", content: "This is project Four", link: "https://example.com/" },
+  name: { title: "This is name", content: "shree" },
+}
 
 const modal = document.querySelector(".modal")
 const modalTitle = document.querySelector(".modal-title")
-const modalprojectDescription = document.querySelector(".modal-project-description")
+const modalDesc = document.querySelector(".modal-project-description")
 const modalExitButton = document.querySelector(".modal-exit-button")
 const modalVisitProjectButton = document.querySelector(".modal-visit-button")
 
-function showModal(id){
-  const content = modalContent[id];
-  if(content){
-    modalTitle.textContent = content.title;
-    modalprojectDescription.textContent = content.content;
-    modal.classList.toggle("hidden");
-  }
+function showModal(id) {
+  const content = modalContent[id]
+  if (content) {
+    modalTitle.textContent = content.title
+    modalDesc.textContent = content.content
+    modal.classList.toggle("hidden")
 
-  if (content.link){
-    modalVisitProjectButton.href = content.link
-    modalVisitProjectButton.classList.remove("hidden");
-  }else{
-    modalVisitProjectButton.classList.add("hidden");
-  }
-}
-
-function hideModal(){
-  modal.classList.toggle("hidden")
-}
-
-let intersectObject = "";
-
-function onPointerMove(event){
-  pointer.x = (event.clientX / window.innerWidth) * 2 - 1
-  pointer.y = -(event.clientY / window.innerHeight) * 2 + 1
-}
-
-window.addEventListener('pointermove', onPointerMove)
-
-/**
- * Movements and interactions
- */
-
-function jumpCharacter(meshID){
-  const mesh = scene.getObjectByName(meshID);
-  const jumpHeight = 2 ;
-  const jumpDuration = 0.5;
-
-  const t1 = gsap.timeline();
-
-  t1.to (mesh.scale, {
-    x:1.2,
-    y:0.8,
-    z:1.2,
-    duration:jumpDuration*0.2,
-    ease: "power2.out",
-  });
-  t1.to(mesh.scale, {
-    x:0.8,
-    y:1.3,
-    z:0.8,
-    duration:jumpDuration*0.3,
-    ease: "power2.out",
-  });
-
-  t1.to(mesh.position, {
-    y: mesh.position.y + jumpHeight,
-    duration:jumpDuration*0.5,
-    ease: "power2.out",
-  },"<");
-
-  t1.to(mesh.scale, {
-    x:1.5,
-    y:1.5,
-    z:1.5,
-    duration:jumpDuration*0.3,
-    ease: "power1.inOut",
-  });
-
-  t1.to(mesh.position, {
-    y:mesh.position.y,
-    duration:jumpDuration*0.5,
-    ease: "bounce.out",
-  },">");
-
-  t1.to(mesh.scale, {
-    x:1.5,
-    y:1.5,
-    z:1.5,
-    duration:jumpDuration*0.2,
-    ease: "elastic.out(1,0.3)",
-  });
-}
-
-function onClick(){
-  if (intersectObject !== ""){
-    if (["tuttle", "Snorlax"].includes(intersectObject)){
-      jumpCharacter(intersectObject); 
+    if (content.link) {
+      modalVisitProjectButton.href = content.link
+      modalVisitProjectButton.classList.remove("hidden")
     } else {
-      showModal(intersectObject);
+      modalVisitProjectButton.classList.add("hidden")
     }
   }
 }
 
-function moveCharacter(targetPosition, targetRotation) {
-  character.isMoving = true;
-
-  const t1 = gsap.timeline({
-    onComplete: () => (character.isMoving = false)
-  });
-
-  // Move
-  t1.to(character.instance.position, {
-    x: targetPosition.x,
-    z: targetPosition.z,
-    duration: character.moveDuration,
-    ease: "power1.inOut"
-  });
-
-  // Rotate (at same time)
-  t1.to(character.instance.rotation, {
-    y: targetRotation,
-    duration: character.moveDuration,
-    ease: "power1.inOut"
-  }, "<");
-
-  //jump Animation
-  t1.to(character.instance.position, {
-    y: character.instance.position.y + character.jumpHeight ,
-    duration: character.moveDuration/2,
-    yoyo: true,
-    repeat:1
-  }, "<");
+function hideModal() {
+  modal.classList.toggle("hidden")
 }
 
-function onKeyDown(event) {
-  if (!character.instance || character.isMoving) return;
+let intersectObject = ""
 
-  const targetPosition = character.instance.position.clone();
-  let targetRotation = character.instance.rotation.y;
+/**
+ * Interaction + Click
+ */
+function jumpCharacter(meshID) {
+  const mesh = scene.getObjectByName(meshID)
+  if (!mesh) return
 
-  switch (event.key.toLowerCase()) {
-    case "w":
-    case "arrowup":
-      targetPosition.x -= character.moveDistance;
-      targetRotation = 0; 
-      break;
-    case "s":
-    case "arrowdown":
-      targetPosition.x += character.moveDistance;
-      targetRotation = Math.PI; 
-      break;
-    case "a":
-    case "arrowleft":
-      targetPosition.z += character.moveDistance;
-      targetRotation = -Math.PI/2; 
-      break;
-    case "d":
-    case "arrowright":
-      targetPosition.z -= character.moveDistance;   
-      targetRotation = Math.PI/2; 
-      break;
-    default:
-      return;
+  const jumpHeight = 2
+  const jumpDuration = 0.5
+  const t1 = gsap.timeline()
+
+  t1.to(mesh.scale, { x: 1.2, y: 0.8, z: 1.2, duration: jumpDuration * 0.2 })
+    .to(mesh.scale, { x: 0.8, y: 1.3, z: 0.8, duration: jumpDuration * 0.3 })
+    .to(mesh.position, { y: mesh.position.y + jumpHeight, duration: jumpDuration * 0.5, ease: "power2.out" }, "<")
+    .to(mesh.scale, { x: 1.5, y: 1.5, z: 1.5, duration: jumpDuration * 0.3 })
+    .to(mesh.position, { y: mesh.position.y, duration: jumpDuration * 0.5, ease: "bounce.out" }, ">")
+}
+
+function onClick() {
+  if (intersectObject) {
+    if (["tuttle", "Snorlax"].includes(intersectObject)) {
+      jumpCharacter(intersectObject)
+    } else {
+      showModal(intersectObject)
+    }
   }
-
-  moveCharacter(targetPosition, targetRotation);
 }
 
 window.addEventListener('click', onClick)
 modalExitButton.addEventListener("click", hideModal)
+
+/**
+ * Player Update + Controls
+ */
+
+function respawnCharacter (){
+  character.instance.position.copy(character.spawnPosition)
+
+  playerCollider.start.copy(character.spawnPosition).add(new THREE.Vector3(0, CAPSULE_RADIUS, 0))
+  playerCollider.end.copy(character.spawnPosition).add(new THREE.Vector3(0, CAPSULE_HEIGHT, 0))
+
+//character will not move once respawned
+  playerVelocity.set (0,0,0)
+  character.isMoving= false 
+}
+
+function playerCollisions (){
+  const result = colliderOctree.capsuleIntersect(playerCollider);
+  playerOnFloor= false;
+
+  if (result){
+    playerOnFloor =result.normal.y > 0
+    playerCollider.translate(result.normal.multiplyScalar(result.depth));
+
+    if (playerOnFloor){
+      character.isMoving = false;
+      playerVelocity.x = 0;
+      playerVelocity.z = 0;
+
+    }
+  }
+}
+
+
+
+function updatePlayer() {
+
+  if (!character.instance) return
+
+  if (character.instance.y <-0.1){
+    respawnCharacter();
+    return;
+  }
+
+  // Apply gravity
+  if (!playerOnFloor) {
+    playerVelocity.y -= GRAVITY * 0.035
+  }
+
+  // Move player
+  const delta = playerVelocity.clone().multiplyScalar(0.035)
+  playerCollider.translate(delta)
+  playerCollisions()
+
+  // Update character position and rotation
+  character.instance.position.copy(playerCollider.start)
+  character.instance.position.y -= CAPSULE_RADIUS
+
+
+  character.instance.rotation.y = THREE.MathUtils.lerp(character.instance.rotation.y, targetRotation, 0.1)
+}
+
+
+function onKeyDown(event) {
+
+  if (event.key.toLowerCase()=== "r"){  //debug_ui
+    respawnCharacter()
+    return
+  }
+  if (!character.instance || character.isMoving) return
+
+  switch (event.key.toLowerCase()) {
+    case "w":
+    case "arrowup":
+      playerVelocity.x -= MOVE_SPEED
+      targetRotation = 0
+      break
+    case "s":
+    case "arrowdown":
+      playerVelocity.x += MOVE_SPEED
+      targetRotation = Math.PI
+      break
+    case "a":
+    case "arrowleft":
+      playerVelocity.z += MOVE_SPEED
+      targetRotation = -Math.PI / 2
+      break
+    case "d":
+    case "arrowright":
+      playerVelocity.z -= MOVE_SPEED
+      targetRotation = Math.PI / 2
+      break
+    default:
+      return
+  }
+
+  playerVelocity.y = JUMP_HEIGHT
+  character.isMoving = true
+}
+
 window.addEventListener("keydown", onKeyDown)
 
 /**
  * Camera
  */
 const aspectRatio = sizes.width / sizes.height
-const viewSize = 0.5
+const viewSize = 25
 
 const camera = new THREE.OrthographicCamera(
-    -aspectRatio * viewSize, 
-    aspectRatio * viewSize, 
-    viewSize,
-    -viewSize,
-    0.1, 
-    1000
+  -aspectRatio * viewSize,
+  aspectRatio * viewSize,
+  viewSize,
+  -viewSize,
+  0.1,
+  1000
 )
+camera.position.set(30, 30, 30)
+
+const cameraOffset = new THREE.Vector3(30,30,30)
+
 scene.add(camera)
-
-camera.position.set(12,8,8);
-
-const helper = new THREE.CameraHelper(camera);
-scene.add(helper);
+// scene.add(new THREE.CameraHelper(camera))
 
 /**
  * Controls
  */
-const controls = new OrbitControls(camera, canvas)
-controls.target.set(0, 0, 0)
-controls.enableDamping = true
+
 
 /**
  * Renderer
  */
-const renderer = new THREE.WebGLRenderer({
-    canvas: canvas
-})
+const renderer = new THREE.WebGLRenderer({ canvas })
 renderer.shadowMap.enabled = true
 renderer.shadowMap.type = THREE.PCFSoftShadowMap
 renderer.setSize(sizes.width, sizes.height)
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
 renderer.toneMapping = THREE.ACESFilmicToneMapping
 renderer.toneMappingExposure = 1.5
-renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
+renderer.setClearColor(0x97e460)
 
 /**
  * Animate
  */
-function animate(){
-  raycaster.setFromCamera(pointer, camera);
+function animate() {
+  updatePlayer()
+
+  if (character.instance){
+    camera.lookAt(character.instance.position)
+    const targetCameraPosition = new THREE.Vector3(
+      character.instance.position.x + cameraOffset.x , 
+      cameraOffset.y ,
+      character.instance.position.z + cameraOffset.z );
+    camera.position.copy(targetCameraPosition)
+
+    camera.lookAt(character.instance.position.x,camera.position.y -30 ,character.instance.position.z)
+
+  }
   
+  // controls.update()
+
+  raycaster.setFromCamera(pointer, camera)
   const intersects = raycaster.intersectObjects(intersectObjects, true)
 
-  if (intersects.length > 0){
+  if (intersects.length > 0) {
     document.body.style.cursor = "pointer"
     intersectObject = intersects[0].object.parent.name
   } else {
     document.body.style.cursor = "default"
     intersectObject = ""
   }
+
 
   renderer.render(scene, camera)
   window.requestAnimationFrame(animate)
