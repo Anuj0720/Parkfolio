@@ -255,7 +255,7 @@ function handleJumpAnimation() {
     x: base.x * 1.15,
     y: base.y * 0.85,
     z: base.z * 1.15,
-    duration: jumpDuration * 0.3,
+    duration: jumpDuration * 0.2,
     ease: "power2.out",
   })
   .to(character.instance.scale, {
@@ -270,15 +270,15 @@ function handleJumpAnimation() {
     x: base.x,
     y: base.y,
     z: base.z,
-    duration: jumpDuration * 0.2,
-    ease: "power1.out",
+    duration: jumpDuration * 0.3,
+    ease: "power1.inOut",
   })
   .to(character.instance.scale, {
     x: base.x,
     y: base.y,
     z: base.z,
     duration: jumpDuration * 0.2,
-    ease: "power1.out",
+    
   })
 }
 
