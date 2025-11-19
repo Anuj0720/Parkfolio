@@ -83,10 +83,7 @@ function startMove(direction) {
 
   playerVelocity.y = JUMP_HEIGHT
   character.isMoving = true
-
-  // optional: sound here, if you wired Howler
-  // playSound('jumpSFX')
-
+  playSound('jumpSFX')
   handleJumpAnimation()
 }
 
@@ -576,45 +573,26 @@ function updatePlayer() {
 
 }
 
+
+
 function onKeyDown(event) {
 
-  if (event.key.toLowerCase() === "r") {
+  const key = event.key.toLowerCase()
+
+  if (key === "r") {
     respawnCharacter()
     return
   }
 
-  if (!character.instance || character.isMoving || isModalOpen) return
-
-  switch (event.key.toLowerCase()) {
-    case "w":
-    case "arrowup":
-      playerVelocity.x -= MOVE_SPEED
-      targetRotation = 0
-      break
-    case "s":
-    case "arrowdown":
-      playerVelocity.x += MOVE_SPEED
-      targetRotation = Math.PI
-      break
-    case "a":
-    case "arrowleft":
-      playerVelocity.z += MOVE_SPEED
-      targetRotation = -Math.PI / 2
-      break
-    case "d":
-    case "arrowright":
-      playerVelocity.z -= MOVE_SPEED
-      targetRotation = Math.PI / 2
-      break
-    default:
-      return
+  if (key === 'w' || key === 'arrowup') {
+    startMove('up')
+  } else if (key === 's' || key === 'arrowdown') {
+    startMove('down')
+  } else if (key === 'a' || key === 'arrowleft') {
+    startMove('left')
+  } else if (key === 'd' || key === 'arrowright') {
+    startMove('right')
   }
-
-  playerVelocity.y = JUMP_HEIGHT
-  character.isMoving = true
-  playSound('jumpSFX')  
-  //  Trigger squash & stretch
-  handleJumpAnimation()
 }
 
 window.addEventListener("keydown", onKeyDown)

@@ -175,14 +175,20 @@ utility
 }
 
 /* mobile controls */
+.mobile-control-wrapper {
+  bottom: 40px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
 .mobile-control {
   z-index: 500;
   position: fixed;
   bottom: 40px;
   left: 50%;
   transform: translateX(-50%);
-  background: #000;
-  color: #fff;
+  background: #fff;
+  color: #000;
   height: 56px;
   width: 56px;
   display: none;            /* hidden on desktop, shown on mobile */
@@ -196,20 +202,20 @@ utility
 
 /* positions relative to center button */
 .up-arrow {
-  transform: translate(-50%, -80px);
+  transform: translate(-50%, -170%);
 }
 .down-arrow {
-  transform: translate(-50%, 0);
+  transform: translate(-50%, 30%);
 }
 .left-arrow {
-  transform: translate(-110px, -40px);
+  transform: translate(-100px, -40px);
 }
 .right-arrow {
-  transform: translate(10px, -40px);
+  transform: translate(45px, -40px);
 }
 
 /* show them on smaller screens */
-@media (max-width: 900px) {
+@media (max-width: 1024px) {
   .mobile-control {
     display: flex;
   }
