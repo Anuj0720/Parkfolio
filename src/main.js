@@ -6,7 +6,7 @@ import { DRACOLoader } from 'three/examples/jsm/loaders/DRACOLoader.js'
 import { gsap } from "gsap";
 import { Octree } from 'three/addons/math/Octree.js'
 import { Capsule } from 'three/addons/math/Capsule.js'
-
+import { Howl, Howler } from 'howler' //audio
 
 //loading screen 
 
@@ -18,6 +18,20 @@ const canvas = document.querySelector('canvas.webgl')
 const scene = new THREE.Scene()
 // const gui = new GUI()
 
+const audioToggle = document.querySelector('.audio-toggle')
+
+audioToggle.addEventListener('click', () => {
+  isMuted = !isMuted
+  if (isMuted) {
+    Howler.mute(true)
+    audioToggle.textContent = '🔇'
+  } else {
+    Howler.mute(false)
+    audioToggle.textContent = '🔊'
+    startBgmOnce()
+  }
+})
+
 /**
  * Loaders
  */
@@ -26,6 +40,57 @@ dracoLoader.setDecoderPath('/draco')
 
 const gltfLoader = new GLTFLoader()
 gltfLoader.setDRACOLoader(dracoLoader)
+
+/**
+ * sounds
+ */
+const sounds = {
+  backgroundMusic: new Howl({
+    src: ['/sfx/sfx_music.ogg'],   // from public/sfx
+    loop: true,
+    volume: 0.3,
+    preload: true,
+  }),
+
+  projectsSFX: new Howl({
+    src: ['/sfx/sfx_projects.ogg'],
+    volume: 0.5,
+    preload: true,
+  }),
+
+  pokemonSFX: new Howl({
+    src: ['/sfx/sfx_pokemon.ogg'],
+    volume: 0.5,
+    preload: true,
+  }),
+
+  jumpSFX: new Howl({
+    src: ['/sfx/sfx_jumpsfx.ogg'],
+    volume: 1.0,
+    preload: true,
+  }),
+}
+
+let isMuted = false
+let bgmStarted = false
+
+function playSound(id) {
+  if (!isMuted && sounds[id]) {
+    sounds[id].play()
+  }
+}
+
+function stopSound(id) {
+  if (sounds[id]) {
+    sounds[id].stop()
+  }
+}
+
+function startBgmOnce() {
+  if (bgmStarted || isMuted) return
+  bgmStarted = true
+  sounds.backgroundMusic.play()
+}
 
 /**
  * Physics constants
@@ -120,7 +185,7 @@ scene.add(ambientLight)
 
 const directionalLight = new THREE.DirectionalLight(0xffffff, 1.8)
 directionalLight.castShadow = true
-directionalLight.position.set(-50, 80, 50)
+directionalLight.position.set(-50, 80, 30)
 
 directionalLight.shadow.mapSize.set(4096, 4096)
 
@@ -205,9 +270,10 @@ const modalContent = {
     image: "/images/talkFlow.webp"
   },
   name: { 
-    title: "This is name", 
-    content: "shree",
-    image: "/images/default.jpg"
+    title: "Shrinath Hinge", 
+    content: "Aspiring Software Developer (2026 Batch).",
+    link: "https://github.com/SUPERSIRI9/Resume/blob/main/reumeShri.pdf/",
+    image: "/images/me.webp"
   },
 }
 
@@ -223,6 +289,7 @@ let isModalOpen = false; // ✅ track modal state
 function showModal(id) {
   const content = modalContent[id]
   if (content) {
+    playSound('projectsSFX')
     modalTitle.textContent = content.title
     modalDesc.textContent = content.content
     modal.classList.remove("hidden")
@@ -245,6 +312,7 @@ function showModal(id) {
 }
 
 function hideModal() {
+  playSound('projectsSFX')
   modal.classList.add("hidden")
   isModalOpen = false
 }
@@ -318,6 +386,7 @@ function handleJumpAnimation() {
 function onClick() {
   if (intersectObject && !isModalOpen) {
     if (["tuttle", "Snorlax"].includes(intersectObject)) {
+      playSound('pokemonSFX')
       jumpCharacter(intersectObject) 
     } else {
       showModal(intersectObject)
@@ -326,7 +395,10 @@ function onClick() {
 }
 
 
-window.addEventListener('click', onClick)
+window.addEventListener('click', (e) => {
+  startBgmOnce()   // start music on first user interaction
+  onClick(e)
+})
 modalExitButton.addEventListener("click", hideModal)
 
 /**
@@ -427,8 +499,8 @@ function onKeyDown(event) {
 
   playerVelocity.y = JUMP_HEIGHT
   character.isMoving = true
-
-  // 🔥 Trigger squash & stretch here
+  playSound('jumpSFX')  
+  //  Trigger squash & stretch
   handleJumpAnimation()
 }
 

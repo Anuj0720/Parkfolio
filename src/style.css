@@ -21,6 +21,19 @@ body
     outline: none;
 }
 
+.audio-toggle {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  font-size: 24px;
+  padding: 10px;
+  background: #fff;
+  border: 2px solid #000;
+  border-radius: 8px;
+  cursor: pointer;
+  z-index: 999;
+}
+
 /*
 utility
 */
@@ -49,8 +62,8 @@ utility
 }
 
 .modal-img{
-  width: 100px;
-  height: 100px;
+  width: 150px;
+  height:150px;
   margin-bottom: 12px;
 }
 .modal-wrapper{
