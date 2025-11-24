@@ -47,6 +47,7 @@ enterButton.addEventListener('click', () => {
   })
 
   // 🔊 start sounds if not muted
+  
   if (!isMuted) {
     playSound('projectsSFX')
     playSound('backgroundMusic')
