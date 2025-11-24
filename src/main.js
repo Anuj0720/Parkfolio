@@ -47,7 +47,7 @@ enterButton.addEventListener('click', () => {
   })
 
   // 🔊 start sounds if not muted
-  
+
   if (!isMuted) {
     playSound('projectsSFX')
     playSound('backgroundMusic')
@@ -649,13 +649,12 @@ function animate() {
     camera.lookAt(character.instance.position.x, camera.position.y - 30, character.instance.position.z)
   }
 
-  // Raycasting disabled while modal is open
+  //when modal is open 
   if (!isModalOpen) {
+      // Raycasting disabled while modal is open
     raycaster.setFromCamera(pointer, camera);
   
     // Raycast against the whole scene or your pre-collected list.
-    // Using scene.children is more robust; you can swap back to intersectObjects if you
-    // want to limit targets for performance (but then make sure you pushed the right nodes).
     const intersects = raycaster.intersectObjects(scene.children, true);
   
     if (intersects.length > 0) {
