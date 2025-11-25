@@ -1,66 +1,69 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Shrinath's ParkFolio</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400..700&display=swap" rel="stylesheet">
-    
-    <link rel="stylesheet" href="/src/style.css">
-</head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Shrinath's ParkFolio</title>
 
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400..700&display=swap" rel="stylesheet">
+
+  <!-- Link to external CSS -->
+  <link rel="stylesheet" href="/src/style.css">
+</head>
 <body>
-      <!-- Mobile controls -->
-      <div class="mobile-controls-container hidden">
-        <div class="mobile-control up-arrow">▲</div>
-        <div class="mobile-control left-arrow">◀</div>
-        <div class="mobile-control right-arrow">▶</div>
-        <div class="mobile-control down-arrow">▼</div>
+
+  <!-- Mobile controls -->
+  <div class="mobile-controls-container hidden" id="mobileControlsContainer">
+    <div class="mobile-control up-arrow">▲</div>
+    <div class="mobile-control left-arrow">◀</div>
+    <div class="mobile-control right-arrow">▶</div>
+    <div class="mobile-control down-arrow">▼</div>
+  </div>
+
+  <!-- Modal (fixed markup + a11y) -->
+  <div class="modal hidden" id="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle" aria-hidden="true">
+    <div class="modal-wrapper">
+      <div class="modal-image">
+        <img class="modal-img" id="modalImg" src="/images/asteroidShooter.webp" alt="asteroid shooter preview">
       </div>
 
-  <div class="modal hidden">
+      <div class="modal-header">
+        <h1 id="modalTitle" class="modal-title">project one</h1>
+      </div>
 
-      <div class="modal-wrapper">
-        <div class="modal-image">
-          <img class="modal-img" src="/images/asteroidShooter.webp" alt="asteroidShooter" >
-        </div>
-        <div class="modal-header">
-          <h1 class="modal-title">project one</h1>
-        </div>
-        <div class="modal-content">
-          <div class="modal-content-wrapper">
-            <p class="modal-project-description">Lorem ipsum dolor, sit amet consectetur adipisicing elit.
-              Excepturi tempora aspernatur repellendus, neque suscipit odio esse quae eveniet omnis ad earum dicta, 
-              aliquid sint illo reiciendis molestiae voluptatem, voluptas quisquam!</div>
-            </p>
-            <a 
-            href= "#"
-            target="_blank"
-            rel="noopener noreferrer"
-            class="modal-visit-button hidden">view project</a>
-          </div>
-        </div>
-        <button class="modal-exit-button"><ion-icon class="icon" name="close-outline"></ion-icon></button>
+      <div class="modal-content">
+        <div class="modal-content-wrapper">
+          <p class="modal-project-description" id="modalDesc">Lorem ipsum dolor, sit amet consectetur adipisicing elit. Excepturi tempora aspernatur repellendus, neque suscipit odio esse quae eveniet omnis ad earum dicta, aliquid sint illo reiciendis molestiae voluptatem, voluptas quisquam!</p>
 
-  </div>
-    <canvas class="webgl"></canvas>
+          <a href="#" target="_blank" rel="noopener noreferrer" class="modal-visit-button hidden" id="modalVisit">view project</a>
+        </div>
+      </div>
 
-    <!-- loading screen -->
-    <div class="loading-screen" id="loadingScreen">
-      <div class="loading-text">Loading...</div>
-      <button class="enter-button">Enter Park!</button>
-      <div class="instructions">~ use WASD / arrows to move ~ <br>~ R to respawn ~</div>
+      <button class="modal-exit-button" id="modalExit" aria-label="Close modal"><ion-icon class="icon" name="close-outline"></ion-icon></button>
     </div>
-  
+  </div>
 
-    <button class="audio-toggle">🔊</button>
+  <canvas class="webgl" id="webglCanvas"></canvas>
 
+  <!-- loading screen -->
+  <div class="loading-screen" id="loadingScreen">
+    <div class="loading-text">Loading...</div>
+    <button class="enter-button" id="enterButton" type="button" aria-label="Enter Park">Enter Park!</button>
+    <div class="instructions">~ use WASD / arrows to move ~ <br>~ R to respawn ~</div>
+  </div>
 
-    <script type="module" src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.esm.js"></script>
-    <script nomodule src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/howler/2.2.4/howler.min.js"></script>
-    <script type="module" src="/src/main.js"></script>
+  <button class="audio-toggle" id="audioToggle">🔊</button>
+
+  <!-- Ionicons (module + nomodule) -->
+  <script type="module" src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.esm.js"></script>
+  <script nomodule src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.js"></script>
+
+  <!-- Howler (for audio) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/howler/2.2.4/howler.min.js"></script>
+
+  <!-- Your main module -->
+  <script type="module" src="/src/main.js"></script>
 </body>
 </html>

@@ -1,66 +1,41 @@
 import * as THREE from 'three'
-// import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
-import GUI from 'lil-gui'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
 import { DRACOLoader } from 'three/examples/jsm/loaders/DRACOLoader.js'
-import { gsap } from "gsap";
+import { gsap } from 'gsap'
 import { Octree } from 'three/addons/math/Octree.js'
 import { Capsule } from 'three/addons/math/Capsule.js'
-import { Howl, Howler } from 'howler' //audio
+import { Howl, Howler } from 'howler'
 
-//loading screen 
+// DOM refs
 const loadingScreen = document.getElementById('loadingScreen')
 const loadingText   = document.querySelector('.loading-text')
-const enterButton   = document.querySelector('.enter-button')
+const enterButton   = document.getElementById('enterButton')
 const instructions  = document.querySelector('.instructions')
-const mobileControlsContainer = document.querySelector('.mobile-controls-container')
+const mobileControlsContainer = document.getElementById('mobileControlsContainer')
 
 // Three.js LoadingManager
 const manager = new THREE.LoadingManager()
 
 manager.onLoad = () => {
-  // when ALL resources using this manager are loaded
-  // fade out "Loading..." and show the button
-  gsap.to(loadingText, {
-    opacity: 0,
-    duration: 0.3,
-  })
-
-  gsap.to(enterButton, {
-    opacity: 1,
-    duration: 0.3,
-  })
+  gsap.to(loadingText, { opacity: 0, duration: 0.3 })
+  gsap.to(enterButton, { opacity: 1, duration: 0.3 })
 }
 
 enterButton.addEventListener('click', () => {
-  gsap.to(loadingScreen, {
-    opacity: 0,
-    duration: 0.3,
-    onComplete: () => {
-      loadingScreen.remove()
-    },
-  })
+  gsap.to(loadingScreen, { opacity: 0, duration: 0.3, onComplete: () => loadingScreen.remove() })
+  gsap.to(instructions, { opacity: 0, duration: 0.3 })
 
-  gsap.to(instructions, {
-    opacity: 0,
-    duration: 0.3,
-  })
-
-  // 🔊 start sounds if not muted
-
+  // start sounds if not muted
   if (!isMuted) {
     playSound('projectsSFX')
     playSound('backgroundMusic')
   }
 
-  // ✅ show mobile controls AFTER entering park
+  // show mobile controls after entering park
   mobileControlsContainer.classList.remove('hidden')
 })
 
-/** moblie controls */
-
-
-
+/** mobile controls */
 function startMove(direction) {
   if (!character.instance || character.isMoving || isModalOpen) return
 
@@ -91,16 +66,11 @@ function startMove(direction) {
   handleJumpAnimation()
 }
 
-
-
-/**
- * Base setup
- */
-const canvas = document.querySelector('canvas.webgl')
+// Base setup
+const canvas = document.getElementById('webglCanvas')
 const scene = new THREE.Scene()
-// const gui = new GUI()
 
-const audioToggle = document.querySelector('.audio-toggle')
+const audioToggle = document.getElementById('audioToggle')
 
 audioToggle.addEventListener('click', () => {
   isMuted = !isMuted
@@ -114,106 +84,52 @@ audioToggle.addEventListener('click', () => {
   }
 })
 
-/**
- * Loaders
- */
+// Loaders
 const dracoLoader = new DRACOLoader()
 dracoLoader.setDecoderPath('/draco')
 
 const gltfLoader = new GLTFLoader(manager)
 gltfLoader.setDRACOLoader(dracoLoader)
 
-/**
- * sounds
- */
+// sounds
 const sounds = {
-  backgroundMusic: new Howl({
-    src: ['/sfx/sfx_music.ogg'],   // from public/sfx
-    loop: true,
-    volume: 0.3,
-    preload: true,
-  }),
-
-  projectsSFX: new Howl({
-    src: ['/sfx/sfx_projects.ogg'],
-    volume: 0.5,
-    preload: true,
-  }),
-
-  pokemonSFX: new Howl({
-    src: ['/sfx/sfx_pokemon.ogg'],
-    volume: 0.5,
-    preload: true,
-  }),
-
-  jumpSFX: new Howl({
-    src: ['/sfx/sfx_jumpsfx.ogg'],
-    volume: 1.0,
-    preload: true,
-  }),
+  backgroundMusic: new Howl({ src: ['/sfx/sfx_music.ogg'], loop: true, volume: 0.3, preload: true }),
+  projectsSFX: new Howl({ src: ['/sfx/sfx_projects.ogg'], volume: 0.5, preload: true }),
+  pokemonSFX: new Howl({ src: ['/sfx/sfx_pokemon.ogg'], volume: 0.5, preload: true }),
+  jumpSFX: new Howl({ src: ['/sfx/sfx_jumpsfx.ogg'], volume: 1.0, preload: true }),
 }
 
 let isMuted = false
 let bgmStarted = false
 
-function playSound(id) {
-  if (!isMuted && sounds[id]) {
-    sounds[id].play()
-  }
-}
+function playSound(id) { if (!isMuted && sounds[id]) sounds[id].play() }
+function stopSound(id) { if (sounds[id]) sounds[id].stop() }
+function startBgmOnce() { if (bgmStarted || isMuted) return; bgmStarted = true; sounds.backgroundMusic.play() }
 
-function stopSound(id) {
-  if (sounds[id]) {
-    sounds[id].stop()
-  }
-}
-
-function startBgmOnce() {
-  if (bgmStarted || isMuted) return
-  bgmStarted = true
-  sounds.backgroundMusic.play()
-}
-
-/**
- * Physics constants
- */
+// Physics constants
 const GRAVITY = 30
 const CAPSULE_RADIUS = 0.35
 const CAPSULE_HEIGHT = 1
 const JUMP_HEIGHT = 10
 const MOVE_SPEED = 10
 
-/**
- * Character + collider setup
- */
-let character = {
-  instance: null,
-  isMoving: false,
-  spawnPosition : new THREE.Vector3(),
-  baseScale: new THREE.Vector3(1, 1, 1)
-}
-
-let targetRotation = 0 // ✅ initialize safely
+// Character + collider setup
+let character = { instance: null, isMoving: false, spawnPosition: new THREE.Vector3(), baseScale: new THREE.Vector3(1,1,1) }
+let targetRotation = 0
 
 const colliderOctree = new Octree()
-const playerCollider = new Capsule(
-  new THREE.Vector3(0, CAPSULE_RADIUS, 0),
-  new THREE.Vector3(0, CAPSULE_HEIGHT, 0),
-  CAPSULE_RADIUS
-)
+const playerCollider = new Capsule(new THREE.Vector3(0, CAPSULE_RADIUS, 0), new THREE.Vector3(0, CAPSULE_HEIGHT, 0), CAPSULE_RADIUS)
 
 let playerVelocity = new THREE.Vector3()
 let playerOnFloor = false
 
-/**
- * Load GLTF Scene
- */
+// Interactables
 const intersectObjects = []
 const intersectObjectsNames = ["board", "board001", "board002", "board003", "character", "tuttle", "Snorlax", "name"]
 
+// GLTF load
 gltfLoader.load('./models/shreeGarden/shree_man3.glb', (gltf) => {
   gltf.scene.traverse((child) => {
-
     if (intersectObjectsNames.includes(child.name)) {
       intersectObjects.push(child)
     }
@@ -222,16 +138,13 @@ gltfLoader.load('./models/shreeGarden/shree_man3.glb', (gltf) => {
       child.castShadow = true
       child.receiveShadow = true
     }
-
+    
     if (child.name === "character") {
-
       character.spawnPosition.copy(child.position)
       character.instance = child
       character.instance.position.set(32.22153310156273,-0.3860074122666504,-88.23170146943266)
       character.baseScale.copy(child.scale)
 
-
-      // ✅ Initialize collider + rotation safely
       playerCollider.start.copy(child.position).add(new THREE.Vector3(0, CAPSULE_RADIUS, 0))
       playerCollider.end.copy(child.position).add(new THREE.Vector3(0, CAPSULE_HEIGHT, 0))
       targetRotation = child.rotation.y
@@ -244,39 +157,25 @@ gltfLoader.load('./models/shreeGarden/shree_man3.glb', (gltf) => {
   })
 
   scene.add(gltf.scene)
+}, undefined, (err) => {
+  console.warn('GLTF load error', err)
 })
 
-/**
- * Lights
- */
+// Lights
 const ambientLight = new THREE.AmbientLight(0xffffff, 0.4)
 scene.add(ambientLight)
-
-// const directionalLight = new THREE.DirectionalLight(0xffffff, 1.8)
-// directionalLight.castShadow = true
-// directionalLight.position.set(50, 80, 50)
-// directionalLight.shadow.mapSize.set(2048, 2048)
-// directionalLight.shadow.camera.near = 0.5
-// directionalLight.shadow.camera.far = 300
-
-// directionalLight.shadow.bias = -0.0005
-// directionalLight.shadow.normalBias = 0.05
-// scene.add(directionalLight)
-// const helper = new THREE.CameraHelper(directionalLight.shadow.camera)
-// scene.add(helper)
 
 const directionalLight = new THREE.DirectionalLight(0xffffff, 1.8)
 directionalLight.castShadow = true
 directionalLight.position.set(-50, 80, 30)
-
 directionalLight.shadow.mapSize.set(4096, 4096)
 
 const shadowCam = directionalLight.shadow.camera
 shadowCam.near = 1
-shadowCam.far = 300   // already big enough, just keep it
-shadowCam.left   = -150
-shadowCam.right  =  150
-shadowCam.top    =  150
+shadowCam.far = 300
+shadowCam.left = -150
+shadowCam.right = 150
+shadowCam.top = 150
 shadowCam.bottom = -150
 shadowCam.updateProjectionMatrix()
 
@@ -285,15 +184,8 @@ directionalLight.shadow.normalBias = 0.05
 
 scene.add(directionalLight)
 
-
-/**
- * Sizes + Resize
- */
-const sizes = {
-  width: window.innerWidth,
-  height: window.innerHeight,
-  viewSize: 0.5
-}
+// Sizes
+const sizes = { width: window.innerWidth, height: window.innerHeight }
 
 window.addEventListener('resize', () => {
   sizes.width = window.innerWidth
@@ -312,9 +204,7 @@ window.addEventListener('resize', () => {
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
 })
 
-/**
- * Raycaster + Mouse
- */
+// Raycaster + pointer
 const raycaster = new THREE.Raycaster()
 const pointer = new THREE.Vector2()
 
@@ -323,50 +213,15 @@ window.addEventListener('pointermove', (event) => {
   pointer.y = -(event.clientY / window.innerHeight) * 2 + 1
 })
 
-/**
- * Modal Content + UI
- */
-const modalContent = {
-  board: { 
-    title: "Web Dev", 
-    content: "A lightweight POS and inventory system for two-wheeler garages, built with Flask, HTML, Tailwind CSS, and JSON storage.", 
-    link: "https://github.com/ULTRASIRI/POS-system-for-Gargi-Garage/?tab=readme-ov-file",
-    image: "/images/garagePOS.webp"
-  },
-  board001: { 
-    title: "Unity", 
-    content: "This is a simple 2D space-shooter game made in Unity where you control a spaceship and destroy incoming asteroids.", 
-    link: "https://play.unity.com/en/games/d4a805ab-478b-4d53-bb5e-462388b13f9a/asteroid-shooter",
-    image: "/images/asteroidShooter.webp"
-  },
-  board002: { 
-    title: "threejs", 
-    content: "ParkFolio", 
-    link: "https://github.com/ULTRASIRI/Parkfolio",
-    image: "/images/portf.webp"
-  },
-  board003: { 
-    title: "TalkFlow", 
-    content: "This project is under Development", 
-    link: "https://example.com/",
-    image: "/images/talkFlow.webp"
-  },
-  name: { 
-    title: "Shrinath Hinge", 
-    content: "Aspiring Software Developer (2026 Batch).",
-    link: "https://github.com/SUPERSIRI9/Resume/blob/main/reumeShri.pdf/",
-    image: "/images/me.webp"
-  },
-}
+// Modal UI refs
+const modal = document.getElementById('modal')
+const modalTitle = document.querySelector('.modal-title')
+const modalDesc = document.getElementById('modalDesc')
+const modalExitButton = document.getElementById('modalExit')
+const modalVisitProjectButton = document.getElementById('modalVisit')
+const modalImg = document.getElementById('modalImg')
 
-const modal = document.querySelector(".modal")
-const modalTitle = document.querySelector(".modal-title")
-const modalDesc = document.querySelector(".modal-project-description")
-const modalExitButton = document.querySelector(".modal-exit-button")
-const modalVisitProjectButton = document.querySelector(".modal-visit-button")
-const modalImg = document.querySelector(".modal-img") 
-
-//mobile controls
+// mobile controls
 const mobileControls = {
   up: document.querySelector('.mobile-control.up-arrow'),
   down: document.querySelector('.mobile-control.down-arrow'),
@@ -374,7 +229,6 @@ const mobileControls = {
   right: document.querySelector('.mobile-control.right-arrow'),
 }
 
-// bind mobile controls
 function bindMobileControl(el, direction) {
   if (!el) return
 
@@ -395,47 +249,87 @@ bindMobileControl(mobileControls.down, 'down')
 bindMobileControl(mobileControls.left, 'left')
 bindMobileControl(mobileControls.right, 'right')
 
+let isModalOpen = false; // track modal state
+let intersectObject = ""
 
-
-
-let isModalOpen = false; // ✅ track modal state
+// Modal content mapping
+const modalContent = {
+  board: {
+    title: "Web Dev",
+    content: "A lightweight POS and inventory system for two-wheeler garages, built with Flask, HTML, Tailwind CSS, and JSON storage.",
+    link: "https://github.com/ULTRASIRI/POS-system-for-Gargi-Garage/?tab=readme-ov-file",
+    image: "/images/garagePOS.webp"
+  },
+  board001: {
+    title: "Unity",
+    content: "This is a simple 2D space-shooter game made in Unity where you control a spaceship and destroy incoming asteroids.",
+    link: "https://play.unity.com/en/games/d4a805ab-478b-4d53-bb5e-462388b13f9a/asteroid-shooter",
+    image: "/images/asteroidShooter.webp"
+  },
+  board002: {
+    title: "threejs",
+    content: "ParkFolio",
+    link: "https://github.com/ULTRASIRI/Parkfolio",
+    image: "/images/portf.webp"
+  },
+  board003: {
+    title: "TalkFlow",
+    content: "This project is under Development",
+    link: "https://example.com/",
+    image: "/images/talkFlow.webp"
+  },
+  name: {
+    title: "Shrinath Hinge",
+    content: "Aspiring Software Developer (2026 Batch).",
+    link: "https://github.com/SUPERSIRI9/Resume/blob/main/reumeShri.pdf/",
+    image: "/images/me.webp"
+  },
+}
 
 function showModal(id) {
   const content = modalContent[id]
-  if (content) {
-    playSound('projectsSFX')
-    modalTitle.textContent = content.title
-    modalDesc.textContent = content.content
-    modal.classList.remove("hidden")
-    isModalOpen = true
+  if (!content) return
+  playSound('projectsSFX')
+  modalTitle.textContent = content.title
+  modalDesc.textContent = content.content
+  modal.classList.remove("hidden")
+  modal.setAttribute('aria-hidden', 'false')
+  isModalOpen = true
 
-    if (content.link) {
-      modalVisitProjectButton.href = content.link
-      modalVisitProjectButton.classList.remove("hidden")
-    } else {
-      modalVisitProjectButton.classList.add("hidden")
-    }
-
-    // ✅ Update image dynamically
-    if (content.image) {
-      modalImg.src = content.image
-    } else {
-      modalImg.src = "/images/default.jpeg" // fallback
-    }
+  if (content.link) {
+    modalVisitProjectButton.href = content.link
+    modalVisitProjectButton.classList.remove("hidden")
+  } else {
+    modalVisitProjectButton.classList.add("hidden")
   }
+
+  // Update image dynamically
+  if (content.image) {
+    modalImg.src = content.image
+  } else {
+    modalImg.src = "/images/default.jpeg" // fallback
+  }
+
+  // focus management
+  modalExitButton.focus()
 }
 
 function hideModal() {
   playSound('projectsSFX')
   modal.classList.add("hidden")
+  modal.setAttribute('aria-hidden', 'true')
   isModalOpen = false
+
+  // restore focus to enter button or canvas
+  const elToFocus = document.querySelector('.enter-button') || canvas
+  if (elToFocus) elToFocus.focus()
 }
 
-let intersectObject = ""
+modalExitButton.addEventListener("click", hideModal)
 
-/**
- * Interaction + Click
- */
+// allow Escape to close modal
+window.addEventListener('keydown', (e) => { if (e.key === 'Escape' && isModalOpen) hideModal() })
+
 function jumpCharacter(meshID) {
   const mesh = scene.getObjectByName(meshID)
   if (!mesh) return
@@ -451,9 +345,7 @@ function jumpCharacter(meshID) {
     .to(mesh.position, { y: mesh.position.y, duration: jumpDuration * 0.5, ease: "bounce.out" }, ">")
 }
 
-
-//character jump
-
+// character jump animation
 function handleJumpAnimation() {
   if (!character.instance || !character.isMoving) return
 
@@ -462,7 +354,6 @@ function handleJumpAnimation() {
 
   const t1 = gsap.timeline()
 
-  // squash
   t1.to(character.instance.scale, {
     x: base.x * 1.08,
     y: base.y * 0.93,
@@ -477,7 +368,6 @@ function handleJumpAnimation() {
     duration: jumpDuration * 0.3,
     ease: "power2.out",
   })
-  // back to normal
   .to(character.instance.scale, {
     x: base.x,
     y: base.y,
@@ -490,34 +380,26 @@ function handleJumpAnimation() {
     y: base.y,
     z: base.z,
     duration: jumpDuration * 0.2,
-    
   })
 }
-
-
-
 
 function onClick() {
   if (intersectObject && !isModalOpen) {
     if (["tuttle", "Snorlax"].includes(intersectObject)) {
       playSound('pokemonSFX')
-      jumpCharacter(intersectObject) 
+      jumpCharacter(intersectObject)
     } else {
       showModal(intersectObject)
     }
   }
 }
 
-
 window.addEventListener('click', (e) => {
   startBgmOnce()   // start music on first user interaction
   onClick(e)
 })
-modalExitButton.addEventListener("click", hideModal)
 
-/**
- * Player Update + Controls
- */
+// Player update + controls
 function respawnCharacter (){
   character.instance.position.copy(character.spawnPosition)
 
@@ -525,7 +407,7 @@ function respawnCharacter (){
   playerCollider.end.copy(character.spawnPosition).add(new THREE.Vector3(0, CAPSULE_HEIGHT, 0))
 
   playerVelocity.set(0,0,0)
-  character.isMoving = false 
+  character.isMoving = false
 }
 
 function playerCollisions (){
@@ -572,12 +454,9 @@ function updatePlayer() {
   if (deltaRot < 0) deltaRot += Math.PI * 2
   deltaRot -= Math.PI
 
-  // character.instance.rotation.y = THREE.MathUtils.lerp(character.instance.rotation.y, targetRotation, 0.1)
   character.instance.rotation.y = currentY + deltaRot * 0.1
 
 }
-
-
 
 function onKeyDown(event) {
 
@@ -601,9 +480,7 @@ function onKeyDown(event) {
 
 window.addEventListener("keydown", onKeyDown)
 
-/**
- * Camera
- */
+// Camera
 const aspectRatio = sizes.width / sizes.height
 const viewSize = 25
 
@@ -620,9 +497,7 @@ camera.position.set(30, 30, 30)
 const cameraOffset = new THREE.Vector3(30,30,30)
 scene.add(camera)
 
-/**
- * Renderer
- */
+// Renderer
 const renderer = new THREE.WebGLRenderer({ canvas })
 renderer.shadowMap.enabled = true
 renderer.shadowMap.type = THREE.PCFSoftShadowMap
@@ -632,33 +507,29 @@ renderer.toneMapping = THREE.ACESFilmicToneMapping
 renderer.toneMappingExposure = 1.5
 renderer.setClearColor(0x97e460)
 
-/**
- * Animate
- */
+// Animate
 function animate() {
   updatePlayer()
 
   if (character.instance){
     const targetCameraPosition = new THREE.Vector3(
-      character.instance.position.x + cameraOffset.x , 
+      character.instance.position.x + cameraOffset.x ,
       cameraOffset.y +10 ,
       character.instance.position.z + cameraOffset.z
     )
     camera.position.copy(targetCameraPosition)
 
+    // kept intact per your request (project-specific camera tilt)
     camera.lookAt(character.instance.position.x, camera.position.y - 30, character.instance.position.z)
   }
 
   //when modal is open 
   if (!isModalOpen) {
-      // Raycasting disabled while modal is open
+    // Raycast only against the pre-collected interactable objects for performance
     raycaster.setFromCamera(pointer, camera);
-  
-    // Raycast against the whole scene or your pre-collected list.
-    const intersects = raycaster.intersectObjects(scene.children, true);
-  
+    const intersects = raycaster.intersectObjects(intersectObjects, true);
+
     if (intersects.length > 0) {
-      // walk intersects in order (closest first) and climb parents until we find a named interactable
       let foundName = "";
       for (let i = 0; i < intersects.length; i++) {
         let o = intersects[i].object;
@@ -671,7 +542,7 @@ function animate() {
         }
         if (foundName) break;
       }
-  
+
       if (foundName) {
         intersectObject = foundName;
         document.body.style.cursor = "pointer";
@@ -679,7 +550,7 @@ function animate() {
         intersectObject = "";
         document.body.style.cursor = "default";
       }
-  
+
     } else {
       intersectObject = "";
       document.body.style.cursor = "default";
@@ -688,7 +559,6 @@ function animate() {
     intersectObject = "";
     document.body.style.cursor = "default";
   }
-
   renderer.render(scene, camera)
   window.requestAnimationFrame(animate)
 }
