@@ -12,9 +12,10 @@
   <!-- Link to external CSS -->
   <link rel="stylesheet" href="/src/style.css">
 
-  <!-- Ionicons (optional) -->
+  <!-- Ionicons (module + nomodule) -->
   <script type="module" src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.esm.js"></script>
   <script nomodule src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.js"></script>
+
 </head>
 <body class="light-theme">
 
@@ -29,13 +30,13 @@
     <div class="instructions">~ use WASD / arrows to move ~ <br>~ R to respawn ~</div>
   </div>
 
-  <!-- Audio toggle -->
+  <!-- Audio toggle (simple icon swap) -->
   <button class="audio-toggle" id="audioToggle" aria-label="Toggle audio">
     <span class="audio-on">🔊</span>
     <span class="audio-off hidden">🔇</span>
   </button>
 
-  <!-- Theme toggle -->
+  <!-- Theme toggle (optional UI similar to reference) -->
   <div class="theme-mode-toggle-button" id="themeToggle" title="Toggle theme" aria-hidden="false">
     <svg width="46" height="46" viewBox="0 0 46 46" class="first-icon" xmlns="http://www.w3.org/2000/svg">
       <rect x="11" y="11" width="24" height="24" fill="white" />
@@ -65,21 +66,21 @@
     </div>
   </div>
 
-  <!-- Mobile controls -->
-  <div class="mobile-controls-container hidden" id="mobileControlsContainer">
+  <!-- Mobile controls (SVGs for nicer visuals) -->
+  <div class="mobile-controls-container" id="mobileControlsContainer">
     <div class="mobile-control up-arrow" role="button" aria-label="Move up">▲</div>
     <div class="mobile-control left-arrow" role="button" aria-label="Move left">◀</div>
     <div class="mobile-control right-arrow" role="button" aria-label="Move right">▶</div>
     <div class="mobile-control down-arrow" role="button" aria-label="Move down">▼</div>
   </div>
 
-  <!-- Howler (audio) -->
+  <!-- Howler (for audio) -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/howler/2.2.4/howler.min.js"></script>
 
   <!-- GSAP -->
   <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js"></script>
 
-  <!-- main -->
+  <!-- Your main module -->
   <script type="module" src="/src/main.js"></script>
 </body>
 </html>

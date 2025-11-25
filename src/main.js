@@ -1,11 +1,11 @@
-// main.js (module)
+// main.js
 import * as THREE from 'three'
 import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js'
 import { DRACOLoader } from 'three/examples/jsm/loaders/DRACOLoader.js'
 import { Octree } from 'three/addons/math/Octree.js'
 import { Capsule } from 'three/addons/math/Capsule.js'
 import { gsap } from 'gsap'
-import { Howl, Howler } from 'howler'
+import { Howl } from 'howler'
 
 // ---------------------- DOM refs ----------------------
 const canvas = document.getElementById('webglCanvas')
@@ -76,7 +76,7 @@ scene.add(ambientLight)
 const directionalLight = new THREE.DirectionalLight(0xffffff, 1.8)
 directionalLight.castShadow = true
 directionalLight.position.set(-50, 80, 30)
-directionalLight.shadow.mapSize.set(2048, 2048) // kinder on memory
+directionalLight.shadow.mapSize.set(2048, 2048)
 const shadowCam = directionalLight.shadow.camera
 shadowCam.near = 1; shadowCam.far = 300
 shadowCam.left = -150; shadowCam.right = 150; shadowCam.top = 150; shadowCam.bottom = -150
@@ -104,7 +104,7 @@ let playerOnFloor = false
 const intersectObjects = []
 const intersectObjectsNames = ["board", "board001", "board002", "board003", "character", "tuttle", "Snorlax", "name"]
 
-// ---------------------- Loaders ----------------------
+// ---------------------- Loaders & manager ----------------------
 const manager = new THREE.LoadingManager()
 manager.onLoad = () => {
   gsap.to(loadingText, { opacity: 0, duration: 0.3 })
@@ -112,60 +112,73 @@ manager.onLoad = () => {
 }
 
 const dracoLoader = new DRACOLoader()
-dracoLoader.setDecoderPath('/draco') // ensure path exists if you use Draco
+dracoLoader.setDecoderPath('/draco') // ensure this path exists if using Draco
 
 const gltfLoader = new GLTFLoader(manager)
 gltfLoader.setDRACOLoader(dracoLoader)
 
-// Load GLTF (use your correct path)
+// GLTF load: traverse and push logical ancestor nodes (avoid duplicates)
 gltfLoader.load('./models/shreeGarden/shree_man3.glb', (gltf) => {
   gltf.scene.traverse((child) => {
-    if (intersectObjectsNames.includes(child.name)) intersectObjects.push(child)
-    if (child.isMesh) { child.castShadow = true; child.receiveShadow = true }
+    if (child.isMesh) {
+      child.castShadow = true
+      child.receiveShadow = true
+    }
+
+    // if this node or any ancestor matches an interactable name, add the ancestor object to intersectObjects
+    let n = child
+    while (n) {
+      if (intersectObjectsNames.includes(n.name)) {
+        if (!intersectObjects.includes(n)) intersectObjects.push(n)
+        break
+      }
+      n = n.parent
+    }
+
     if (child.name === "character" || child.name === "Character") {
       character.spawnPosition.copy(child.position)
       character.instance = child
       character.baseScale.copy(child.scale)
+      // keep your preferred initial position if you set it earlier
       child.position.set(32.22153310156273,-0.3860074122666504,-88.23170146943266)
       playerCollider.start.copy(child.position).add(new THREE.Vector3(0, CAPSULE_RADIUS, 0))
       playerCollider.end.copy(child.position).add(new THREE.Vector3(0, CAPSULE_HEIGHT, 0))
       targetRotation = child.rotation.y
     }
+
     if (child.name === "ground_collider" || child.name === "Ground_Collider") {
       colliderOctree.fromGraphNode(child)
       child.visible = false
     }
   })
+
   scene.add(gltf.scene)
 }, undefined, (err) => {
   console.warn('GLTF load error', err)
 })
 
-// ---------------------- Raycaster / pointer ----------------------
+// ---------------------- Raycaster & pointer (canvas-aware) ----------------------
 const raycaster = new THREE.Raycaster()
 const pointer = new THREE.Vector2()
-window.addEventListener('pointermove', (e) => {
-  pointer.x = (e.clientX / window.innerWidth) * 2 - 1
-  pointer.y = -(e.clientY / window.innerHeight) * 2 + 1
-})
 
-
-// DEBUG: log raycast hits on click (temporary)
-window.addEventListener('click', (ev) => {
-  raycaster.setFromCamera(pointer, camera);
-  const hits = raycaster.intersectObjects(scene.children, true); // test entire scene
-  console.log('DBG ray hits count:', hits.length);
-  hits.slice(0,10).forEach((h, i) => {
-    console.log(i, 'obj:', h.object.name, 'parent:', h.object.parent ? h.object.parent.name : '(no parent)', 'ancestors:', getAncestorsNames(h.object));
-  });
-}, { passive: true });
-
-function getAncestorsNames(obj) {
-  const names = [];
-  let n = obj;
-  while (n) { names.push(n.name || '(no-name)'); n = n.parent; }
-  return names.join(' -> ');
+function updatePointerFromEvent(event) {
+  const rect = canvas.getBoundingClientRect()
+  const x = ('clientX' in event) ? event.clientX : (event.touches && event.touches[0] && event.touches[0].clientX)
+  const y = ('clientY' in event) ? event.clientY : (event.touches && event.touches[0] && event.touches[0].clientY)
+  if (x == null || y == null) return
+  pointer.x = ((x - rect.left) / rect.width) * 2 - 1
+  pointer.y = -((y - rect.top) / rect.height) * 2 + 1
 }
+
+window.addEventListener('pointermove', (e) => updatePointerFromEvent(e), { passive: true })
+window.addEventListener('touchmove', (e) => updatePointerFromEvent(e), { passive: true })
+window.addEventListener('touchend', (e) => updatePointerFromEvent(e), { passive: false })
+window.addEventListener('click', (e) => {
+  // ensure pointer updated if needed (desktop)
+  updatePointerFromEvent(e)
+  startBgmOnInteraction()
+  handleInteraction()
+}, { passive: false })
 
 // ---------------------- Modal content mapping ----------------------
 const modalContent = {
@@ -240,40 +253,51 @@ modalExitButton.addEventListener('click', hideModal)
 modalBg.addEventListener('click', hideModal)
 window.addEventListener('keydown', (e) => { if (e.key === 'Escape' && isModalOpen) hideModal() })
 
-// ---------------------- Interaction (click/touch) ----------------------
-let touchHappened = false
-window.addEventListener('click', (e) => {
-  if (touchHappened) return
-  startBgmOnInteraction()
-  handleInteraction()
-}, { passive: false })
-
-window.addEventListener('touchend', (e) => {
-  touchHappened = true
-  startBgmOnInteraction()
-}, { passive: false })
-
+// ---------------------- Interaction / robust ray selection ----------------------
 function startBgmOnInteraction(){
   if (!bgmStarted && !isMuted) {
-    playSound('backgroundMusic')
+    sounds.backgroundMusic.play()
     bgmStarted = true
   }
 }
 
 function handleInteraction(){
-  if (isModalOpen) return
-  raycaster.setFromCamera(pointer, camera)
-  const intersects = raycaster.intersectObjects(intersectObjects, true)
-  if (intersects.length > 0){
-    let node = intersects[0].object
-    while (node && !intersectObjectsNames.includes(node.name)) node = node.parent
-    const name = node ? node.name : ""
-    if (["tuttle","Snorlax"].includes(name)) {
-      if (!isMuted) playSound('pokemonSFX')
-      jumpCharacter(name)
-    } else if (name) {
-      showModal(name)
+  if (isModalOpen) return;
+
+  raycaster.setFromCamera(pointer, camera);
+
+  // raycast against the list of interactable group nodes we collected earlier
+  const intersects = raycaster.intersectObjects(intersectObjects, true);
+
+  if (intersects.length === 0) {
+    intersectObject = "";
+    return;
+  }
+
+  // loop in order and pick the first intersect whose ancestor name is in intersectObjectsNames
+  let chosenName = "";
+  for (let i = 0; i < intersects.length; i++) {
+    let node = intersects[i].object;
+    while (node) {
+      if (intersectObjectsNames.includes(node.name)) {
+        chosenName = node.name;
+        break;
+      }
+      node = node.parent;
     }
+    if (chosenName) break;
+  }
+
+  intersectObject = chosenName || "";
+
+  if (!intersectObject) return;
+
+  if (["tuttle","Snorlax"].includes(intersectObject)) {
+    if (!isMuted) playSound('pokemonSFX');
+    jumpCharacter(intersectObject);
+  } else {
+    showModal(intersectObject);
+    if (!isMuted) playSound('projectsSFX');
   }
 }
 
@@ -297,13 +321,14 @@ function jumpCharacter(meshID){
     .to(mesh.position, { y: mesh.position.y, duration: jumpDuration*0.5, ease: 'bounce.out', onComplete: () => { isCharacterReady = true } }, '>')
 }
 
-// ---------------------- Movement: continuous movement pattern (pressedButtons) ----------------------
+// ---------------------- Movement (pressedButtons) ----------------------
 const pressedButtons = { up: false, left: false, right: false, down: false }
 
 function bindMobileControl(el, dir){
   if (!el) return
   el.addEventListener('touchstart', (e) => { e.preventDefault(); pressedButtons[dir] = true }, { passive: false })
   el.addEventListener('touchend', (e) => { e.preventDefault(); pressedButtons[dir] = false }, { passive: false })
+  el.addEventListener('touchcancel', (e) => { pressedButtons[dir] = false }, { passive: false })
   el.addEventListener('mousedown', (e) => { e.preventDefault(); pressedButtons[dir] = true })
   el.addEventListener('mouseup', (e) => { e.preventDefault(); pressedButtons[dir] = false })
   el.addEventListener('mouseleave', () => { pressedButtons[dir] = false })
@@ -352,7 +377,7 @@ function onKeyUp(event){
 window.addEventListener('keydown', onKeyDown)
 window.addEventListener('keyup', onKeyUp)
 
-// handle jump animation for player model
+// player jump visual animation
 function handleJumpAnimation(){
   if (!character.instance || !character.isMoving) return
   const jumpDuration = 0.3
@@ -363,42 +388,22 @@ function handleJumpAnimation(){
     .to(character.instance.scale, { x: base.x, y: base.y, z: base.z, duration: jumpDuration*0.3 })
 }
 
-// ---------- THIS is the restored movement mapping ----------
+// movement behavior (original axis mapping restored)
 function handleContinuousMovement(){
   if (!character.instance) return;
-
-  // If any button pressed and we're not already counted as moving, trigger the hop + velocity.
   if (Object.values(pressedButtons).some(Boolean) && !character.isMoving) {
     if (!isMuted) playSound('jumpSFX');
-
-    // IMPORTANT: Use your project's original axis mapping:
-    // - forward/back affects playerVelocity.x (x axis)
-    // - left/right affects playerVelocity.z (z axis)
-    if (pressedButtons.up) {
-      playerVelocity.x -= MOVE_SPEED;
-      targetRotation = 0;
-    }
-    if (pressedButtons.down) {
-      playerVelocity.x += MOVE_SPEED;
-      targetRotation = Math.PI;
-    }
-    if (pressedButtons.left) {
-      playerVelocity.z += MOVE_SPEED;
-      targetRotation = -Math.PI / 2;
-    }
-    if (pressedButtons.right) {
-      playerVelocity.z -= MOVE_SPEED;
-      targetRotation = Math.PI / 2;
-    }
-
-    // vertical hop applied once when movement begins (like your original)
-    playerVelocity.y = JUMP_HEIGHT;
-    character.isMoving = true;
-    handleJumpAnimation();
+    if (pressedButtons.up)    { playerVelocity.x -= MOVE_SPEED; targetRotation = 0; }
+    if (pressedButtons.down)  { playerVelocity.x += MOVE_SPEED; targetRotation = Math.PI; }
+    if (pressedButtons.left)  { playerVelocity.z += MOVE_SPEED; targetRotation = -Math.PI/2; }
+    if (pressedButtons.right) { playerVelocity.z -= MOVE_SPEED; targetRotation = Math.PI/2; }
+    playerVelocity.y = JUMP_HEIGHT
+    character.isMoving = true
+    handleJumpAnimation()
   }
 }
 
-// ---------------------- Player physics / collisions ----------------------
+// ---------------------- Physics / collisions ----------------------
 function respawnCharacter (){
   if (!character.instance) return
   character.instance.position.copy(character.spawnPosition)
@@ -424,65 +429,47 @@ function playerCollisions (){
 
 function updatePlayer(){
   if (!character.instance) return
-
   if (character.instance.position.y < -35){ respawnCharacter(); return }
-
-  if (!playerOnFloor) {
-    playerVelocity.y -= GRAVITY * 0.035
-  }
-
+  if (!playerOnFloor) { playerVelocity.y -= GRAVITY * 0.035 }
   const delta = playerVelocity.clone().multiplyScalar(0.035)
   playerCollider.translate(delta)
   playerCollisions()
-
   character.instance.position.copy(playerCollider.start)
   character.instance.position.y -= CAPSULE_RADIUS
-
-  // rotation smoothing (keeps your original behavior)
   let rotationDiff = ((((targetRotation - character.instance.rotation.y) % (2 * Math.PI)) + 3 * Math.PI) % (2 * Math.PI)) - Math.PI
   let finalRotation = character.instance.rotation.y + rotationDiff
   character.instance.rotation.y = THREE.MathUtils.lerp(character.instance.rotation.y, finalRotation, 0.4)
 }
 
-// ---------- THIS is the restored camera update (exact copy behavior) ----------
+// camera: restore original exact behaviour (no lerp)
 function updateCameraFollowing(){
-  if (!character.instance) return;
-
+  if (!character.instance) return
   const targetCameraPosition = new THREE.Vector3(
     character.instance.position.x + cameraOffset.x,
     cameraOffset.y + 10,
     character.instance.position.z + cameraOffset.z
-  );
-
-  camera.position.copy(targetCameraPosition);
-
-  // kept intact per your original project-specific camera tilt:
-  camera.lookAt(character.instance.position.x, camera.position.y - 30, character.instance.position.z);
+  )
+  camera.position.copy(targetCameraPosition)
+  camera.lookAt(character.instance.position.x, camera.position.y - 30, character.instance.position.z)
 }
 
-// ---------------------- Raycast hover / cursor ----------------------
+// ---------------------- Raycast hover cursor ----------------------
 function updateRaycastHover(){
-  if (isModalOpen) {
-    document.body.style.cursor = 'default'
-    return
-  }
+  if (isModalOpen) { document.body.style.cursor = 'default'; return }
   raycaster.setFromCamera(pointer, camera)
   const intersects = raycaster.intersectObjects(intersectObjects, true)
-  if (intersects.length > 0) {
-    document.body.style.cursor = 'pointer'
-  } else {
-    document.body.style.cursor = 'default'
-  }
+  if (intersects.length > 0) document.body.style.cursor = 'pointer'
+  else document.body.style.cursor = 'default'
 }
 
-// ---------------------- Animation loop ----------------------
+// ---------------------- animation loop ----------------------
 function animate(){
   updatePlayer()
   handleContinuousMovement()
   updateCameraFollowing()
   updateRaycastHover()
 
-  // update intersectObject for clicks
+  // update intersectObject for clicks (keeps last known)
   const intersects = raycaster.intersectObjects(intersectObjects, true)
   if (intersects.length > 0) {
     let node = intersects[0].object
@@ -503,38 +490,30 @@ enterButton.addEventListener('click', () => {
   gsap.to(instructions, { opacity: 0, duration: 0.3 })
   if (!isMuted) {
     playSound('projectsSFX')
-    playSound('backgroundMusic')
+    sounds.backgroundMusic.play()
+    bgmStarted = true
   }
   mobileControlsContainer.classList.remove('hidden')
 })
 
 audioToggle.addEventListener('click', () => {
-  // flip state
   isMuted = !isMuted
-
   if (isMuted) {
-    // show muted icon
     audioOnSpan.classList.add('hidden')
     audioOffSpan.classList.remove('hidden')
-
-    // Pause background music if it's currently playing
+    // pause background music cleanly
     if (sounds.backgroundMusic && typeof sounds.backgroundMusic.playing === 'function') {
-      if (sounds.backgroundMusic.playing()) {
-        sounds.backgroundMusic.pause()
-      }
+      if (sounds.backgroundMusic.playing()) sounds.backgroundMusic.pause()
+    } else if (sounds.backgroundMusic) {
+      sounds.backgroundMusic.pause()
     }
   } else {
-    // show unmuted icon
     audioOnSpan.classList.remove('hidden')
     audioOffSpan.classList.add('hidden')
-
-    // Resume background music if it's not already playing.
+    // resume background music
     if (sounds.backgroundMusic && typeof sounds.backgroundMusic.playing === 'function') {
-      if (!sounds.backgroundMusic.playing()) {
-        sounds.backgroundMusic.play()
-      }
+      if (!sounds.backgroundMusic.playing()) sounds.backgroundMusic.play()
     } else if (sounds.backgroundMusic) {
-      // fallback: try to play anyway
       sounds.backgroundMusic.play()
     }
   }
@@ -547,7 +526,7 @@ themeToggle.addEventListener('click', () => {
   if (!isMuted) playSound('projectsSFX')
 })
 
-// Resize handling
+// ---------------------- resize / focus / accessibility ----------------------
 window.addEventListener('resize', () => {
   sizes.width = window.innerWidth; sizes.height = window.innerHeight
   const newAspect = sizes.width / sizes.height
@@ -559,19 +538,14 @@ window.addEventListener('resize', () => {
   renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
 })
 
-// window blur: clear pressed buttons
 window.addEventListener('blur', () => {
   Object.keys(pressedButtons).forEach(k => pressedButtons[k] = false)
 })
 
-// accessibility: ensure enter button focusable
 enterButton.setAttribute('tabindex', '0')
 canvas.setAttribute('tabindex', '0')
 
-// touch pointer updates
+// touch pointer updates (safe)
 window.addEventListener('touchend', (ev) => {
-  if (ev.changedTouches && ev.changedTouches[0]) {
-    pointer.x = (ev.changedTouches[0].clientX / window.innerWidth) * 2 - 1
-    pointer.y = -(ev.changedTouches[0].clientY / window.innerHeight) * 2 + 1
-  }
+  if (ev.changedTouches && ev.changedTouches[0]) updatePointerFromEvent(ev.changedTouches[0])
 }, { passive: false })
