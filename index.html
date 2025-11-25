@@ -1,23 +1,17 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>Shrinath's ParkFolio</title>
 
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400..700&display=swap" rel="stylesheet">
 
-  <!-- Link to external CSS -->
   <link rel="stylesheet" href="/src/style.css">
-
-  <!-- Ionicons (module + nomodule) -->
-  <script type="module" src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.esm.js"></script>
-  <script nomodule src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.js"></script>
-
 </head>
-<body class="light-theme">
+<body>
 
   <div id="experience">
     <canvas id="webglCanvas" class="webgl" tabindex="0"></canvas>
@@ -30,20 +24,16 @@
     <div class="instructions">~ use WASD / arrows to move ~ <br>~ R to respawn ~</div>
   </div>
 
-  <!-- Audio toggle (simple icon swap) -->
+  <!-- Audio toggle -->
   <button class="audio-toggle" id="audioToggle" aria-label="Toggle audio">
     <span class="audio-on">🔊</span>
     <span class="audio-off hidden">🔇</span>
   </button>
 
-  <!-- Theme toggle (optional UI similar to reference) -->
-  <div class="theme-mode-toggle-button" id="themeToggle" title="Toggle theme" aria-hidden="false">
-    <svg width="46" height="46" viewBox="0 0 46 46" class="first-icon" xmlns="http://www.w3.org/2000/svg">
-      <rect x="11" y="11" width="24" height="24" fill="white" />
-    </svg>
-    <svg width="46" height="46" viewBox="0 0 46 46" class="second-icon hidden" xmlns="http://www.w3.org/2000/svg">
-      <path d="M0 0h46v46H0z" fill="white"/>
-    </svg>
+  <!-- Theme toggle -->
+  <div class="theme-mode-toggle-button" id="themeToggle" title="Toggle theme">
+    <svg width="46" height="46" class="first-icon" xmlns="http://www.w3.org/2000/svg"><rect x="1" y="11" width="24" height="24" fill="white"/></svg>
+    <svg width="46" height="46" class="second-icon hidden" xmlns="http://www.w3.org/2000/svg"><path d="M0 0h46v46H0z" fill="white"/></svg>
   </div>
 
   <!-- Modal backdrop + Modal -->
@@ -66,21 +56,19 @@
     </div>
   </div>
 
-  <!-- Mobile controls (SVGs for nicer visuals) -->
-  <div class="mobile-controls-container" id="mobileControlsContainer">
+  <!-- Mobile controls -->
+  <div class="mobile-controls-container hidden" id="mobileControlsContainer">
     <div class="mobile-control up-arrow" role="button" aria-label="Move up">▲</div>
     <div class="mobile-control left-arrow" role="button" aria-label="Move left">◀</div>
     <div class="mobile-control right-arrow" role="button" aria-label="Move right">▶</div>
     <div class="mobile-control down-arrow" role="button" aria-label="Move down">▼</div>
   </div>
 
-  <!-- Howler (for audio) -->
+  <!-- Libs -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/howler/2.2.4/howler.min.js"></script>
-
-  <!-- GSAP -->
   <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js"></script>
 
-  <!-- Your main module -->
+  <!-- Main -->
   <script type="module" src="/src/main.js"></script>
 </body>
 </html>

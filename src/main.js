@@ -8,6 +8,7 @@ import { gsap } from 'gsap'
 import { Howl } from 'howler'
 
 // ---------------------- DOM refs ----------------------
+
 const canvas = document.getElementById('webglCanvas')
 const loadingScreen = document.getElementById('loadingScreen')
 const loadingText   = document.querySelector('.loading-text')
@@ -26,6 +27,16 @@ const audioOnSpan = audioToggle.querySelector('.audio-on')
 const audioOffSpan = audioToggle.querySelector('.audio-off')
 const themeToggle = document.getElementById('themeToggle')
 
+// ---------------------- theme load (persisted) ----------------------
+const savedTheme = localStorage.getItem('parkfolio-theme')
+if (savedTheme === 'dark') {
+  document.body.classList.add('dark-theme')
+  document.body.classList.remove('light-theme')
+} else {
+  document.body.classList.add('light-theme')
+  document.body.classList.remove('dark-theme')
+}
+
 // ---------------------- Sounds ----------------------
 const sounds = {
   backgroundMusic: new Howl({ src: ['/sfx/sfx_music.ogg'], loop: true, volume: 0.3, preload: true }),
@@ -43,6 +54,9 @@ function startBgmOnce(){ if (bgmStarted || isMuted) return; bgmStarted = true; s
 // ---------------------- Scene / renderer / camera ----------------------
 const scene = new THREE.Scene()
 scene.background = new THREE.Color(0x97e460)
+
+scene.fog = null;
+scene.background = new THREE.Color(0x97e460);
 
 const sizes = { width: window.innerWidth, height: window.innerHeight }
 const aspect = sizes.width / sizes.height
@@ -85,6 +99,101 @@ directionalLight.shadow.bias = -0.0005
 directionalLight.shadow.normalBias = 0.05
 scene.add(directionalLight)
 
+// keep references (you already have these variables above when creating lights)
+const uiAmbient = ambientLight;
+const uiSun = directionalLight;
+
+// helper to animate scene lighting for theme changes
+function applyThemeToScene(isDark) {
+  const ambientTarget = isDark
+    ? { r: 0.25, g: 0.31, b: 0.78, intensity: 0.8 }
+    : { r: 1.0,  g: 1.0,  b: 1.0,  intensity: 0.4 };
+
+  const sunTarget = isDark
+    ? { r: 0.25, g: 0.41, b: 0.88, intensity: 0.9, pos: { x: -30, y: 80, z: 10 } }
+    : { r: 1.0,  g: 1.0,  b: 1.0,  intensity: 1.8, pos: { x: -50, y: 80, z: 30 } };
+
+  // Ambient light color
+  gsap.to(uiAmbient.color, {
+    r: ambientTarget.r,
+    g: ambientTarget.g,
+    b: ambientTarget.b,
+    duration: 0.6,
+    ease: "power2.inOut"
+  });
+
+  // Ambient intensity
+  gsap.to(uiAmbient, {
+    intensity: ambientTarget.intensity,
+    duration: 0.6,
+    ease: "power2.inOut"
+  });
+
+  // Sun color
+  gsap.to(uiSun.color, {
+    r: sunTarget.r,
+    g: sunTarget.g,
+    b: sunTarget.b,
+    duration: 0.6,
+    ease: "power2.inOut"
+  });
+
+  // Sun intensity
+  gsap.to(uiSun, {
+    intensity: sunTarget.intensity,
+    duration: 0.6,
+    ease: "power2.inOut"
+  });
+
+  // Move sun position
+  gsap.to(uiSun.position, {
+    x: sunTarget.pos.x,
+    y: sunTarget.pos.y,
+    z: sunTarget.pos.z,
+    duration: 0.8,
+    ease: "power2.inOut"
+  });
+
+  // Change scene background immediately (keeps UI consistent)
+  scene.background.set(isDark ? 0x6f7aa7 : 0x97e460);
+
+  // ----- Night-only fog behavior -----
+// ----- Night-only fog behavior -----
+if (isDark) {
+  if (!scene.fog) {
+    scene.fog = new THREE.Fog(0x243b6b, 20, 180); // softer fog
+  }
+
+  // soften color (less dense blue)
+  gsap.to(scene.fog.color, {
+    r: 0.20,
+    g: 0.28,
+    b: 0.50,
+    duration: 0.6,
+    ease: "power2.inOut"
+  });
+
+  gsap.to(scene.fog, {
+    near: 20,
+    far: 180,
+    duration: 0.8,
+    ease: "power2.inOut"
+  });
+
+} else {
+  // remove fog entirely for day
+  if (scene.fog) {
+    gsap.to(scene.fog, {
+      near: 9999,
+      far: 10000,
+      duration: 0.4,
+      onComplete: () => { scene.fog = null; }
+    });
+  }
+}
+}
+
+
 // ---------------------- Physics / player ----------------------
 const GRAVITY = 30
 const CAPSULE_RADIUS = 0.35
@@ -112,7 +221,7 @@ manager.onLoad = () => {
 }
 
 const dracoLoader = new DRACOLoader()
-dracoLoader.setDecoderPath('/draco') // ensure this path exists if using Draco
+dracoLoader.setDecoderPath('/draco') // ensure path exists if using Draco
 
 const gltfLoader = new GLTFLoader(manager)
 gltfLoader.setDRACOLoader(dracoLoader)
@@ -125,7 +234,7 @@ gltfLoader.load('./models/shreeGarden/shree_man3.glb', (gltf) => {
       child.receiveShadow = true
     }
 
-    // if this node or any ancestor matches an interactable name, add the ancestor object to intersectObjects
+    // find nearest ancestor that matches an interactable name, push it once
     let n = child
     while (n) {
       if (intersectObjectsNames.includes(n.name)) {
@@ -139,7 +248,7 @@ gltfLoader.load('./models/shreeGarden/shree_man3.glb', (gltf) => {
       character.spawnPosition.copy(child.position)
       character.instance = child
       character.baseScale.copy(child.scale)
-      // keep your preferred initial position if you set it earlier
+      // keep your preferred initial placement if you set it earlier
       child.position.set(32.22153310156273,-0.3860074122666504,-88.23170146943266)
       playerCollider.start.copy(child.position).add(new THREE.Vector3(0, CAPSULE_RADIUS, 0))
       playerCollider.end.copy(child.position).add(new THREE.Vector3(0, CAPSULE_HEIGHT, 0))
@@ -174,7 +283,6 @@ window.addEventListener('pointermove', (e) => updatePointerFromEvent(e), { passi
 window.addEventListener('touchmove', (e) => updatePointerFromEvent(e), { passive: true })
 window.addEventListener('touchend', (e) => updatePointerFromEvent(e), { passive: false })
 window.addEventListener('click', (e) => {
-  // ensure pointer updated if needed (desktop)
   updatePointerFromEvent(e)
   startBgmOnInteraction()
   handleInteraction()
@@ -250,7 +358,9 @@ function hideModal(){
 }
 
 modalExitButton.addEventListener('click', hideModal)
+modalExitButton.addEventListener('touchstart', (e) => { e.preventDefault(); e.stopPropagation(); hideModal(); }, { passive: false })
 modalBg.addEventListener('click', hideModal)
+modalBg.addEventListener('touchstart', (e) => { /* allow backdrop touch to register but don't prevent propagation here */ }, { passive: true })
 window.addEventListener('keydown', (e) => { if (e.key === 'Escape' && isModalOpen) hideModal() })
 
 // ---------------------- Interaction / robust ray selection ----------------------
@@ -462,7 +572,7 @@ function updateRaycastHover(){
   else document.body.style.cursor = 'default'
 }
 
-// ---------------------- animation loop ----------------------
+// ---------------------- Animation loop ----------------------
 function animate(){
   updatePlayer()
   handleContinuousMovement()
@@ -472,9 +582,17 @@ function animate(){
   // update intersectObject for clicks (keeps last known)
   const intersects = raycaster.intersectObjects(intersectObjects, true)
   if (intersects.length > 0) {
-    let node = intersects[0].object
-    while (node && !intersectObjectsNames.includes(node.name)) node = node.parent
-    intersectObject = node ? node.name : ""
+    // pick first useful ancestor
+    let chosen = ""
+    for (let i = 0; i < intersects.length; i++) {
+      let n = intersects[i].object
+      while (n) {
+        if (intersectObjectsNames.includes(n.name)) { chosen = n.name; break }
+        n = n.parent
+      }
+      if (chosen) break
+    }
+    intersectObject = chosen
   } else {
     intersectObject = ""
   }
@@ -501,7 +619,6 @@ audioToggle.addEventListener('click', () => {
   if (isMuted) {
     audioOnSpan.classList.add('hidden')
     audioOffSpan.classList.remove('hidden')
-    // pause background music cleanly
     if (sounds.backgroundMusic && typeof sounds.backgroundMusic.playing === 'function') {
       if (sounds.backgroundMusic.playing()) sounds.backgroundMusic.pause()
     } else if (sounds.backgroundMusic) {
@@ -510,7 +627,6 @@ audioToggle.addEventListener('click', () => {
   } else {
     audioOnSpan.classList.remove('hidden')
     audioOffSpan.classList.add('hidden')
-    // resume background music
     if (sounds.backgroundMusic && typeof sounds.backgroundMusic.playing === 'function') {
       if (!sounds.backgroundMusic.playing()) sounds.backgroundMusic.play()
     } else if (sounds.backgroundMusic) {
@@ -519,14 +635,28 @@ audioToggle.addEventListener('click', () => {
   }
 })
 
+// theme toggle (persist)
 themeToggle.addEventListener('click', () => {
-  const isDark = document.body.classList.contains('dark-theme')
-  document.body.classList.toggle('dark-theme')
-  document.body.classList.toggle('light-theme')
-  if (!isMuted) playSound('projectsSFX')
-})
+  const nowDark = document.body.classList.toggle('dark-theme');
+  document.body.classList.toggle('light-theme', !nowDark);
+  localStorage.setItem('parkfolio-theme', nowDark ? 'dark' : 'light');
 
-// ---------------------- resize / focus / accessibility ----------------------
+  // play sound as before
+  if (!isMuted) playSound('projectsSFX');
+
+  // swap icons (if you have them)
+  const firstIcon = themeToggle.querySelector('.first-icon')
+  const secondIcon = themeToggle.querySelector('.second-icon')
+  if (firstIcon && secondIcon) {
+    firstIcon.style.display = nowDark ? 'none' : 'block'
+    secondIcon.style.display = nowDark ? 'block' : 'none'
+  }
+
+  // animate lights/scene for the selected theme
+  applyThemeToScene(nowDark);
+});
+
+// ---------------------- Resize / focus / accessibility ----------------------
 window.addEventListener('resize', () => {
   sizes.width = window.innerWidth; sizes.height = window.innerHeight
   const newAspect = sizes.width / sizes.height
