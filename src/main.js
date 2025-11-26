@@ -344,6 +344,7 @@ function showModal(id){
   modal.setAttribute('aria-hidden', 'false')
   isModalOpen = true
   modalExitButton.focus()
+  mobileControlsContainer.classList.add("hidden");
 }
 
 function hideModal(){
@@ -353,6 +354,7 @@ function hideModal(){
   modalBg.classList.add('hidden')
   modal.setAttribute('aria-hidden', 'true')
   isModalOpen = false
+  mobileControlsContainer.classList.remove("hidden");
   const elToFocus = document.querySelector('.enter-button') || canvas
   if (elToFocus) elToFocus.focus()
 }
