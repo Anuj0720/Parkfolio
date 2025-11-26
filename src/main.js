@@ -339,6 +339,12 @@ function showModal(id){
   } else {
     modalVisitProjectButton.classList.add('hidden')
   }
+  // Change button text for the 'name' modal
+  if (id === "name") {
+    modalVisitProjectButton.textContent = "View Resume";
+  } else {
+    modalVisitProjectButton.textContent = "View Project";
+  }
   modal.classList.remove('hidden')
   modalBg.classList.remove('hidden')
   modal.setAttribute('aria-hidden', 'false')
