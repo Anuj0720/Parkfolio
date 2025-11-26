@@ -655,10 +655,11 @@ themeToggle.addEventListener('click', () => {
   // swap icons (if you have them)
   const firstIcon = themeToggle.querySelector('.first-icon')
   const secondIcon = themeToggle.querySelector('.second-icon')
+
   if (firstIcon && secondIcon) {
-    firstIcon.style.display = nowDark ? 'none' : 'block'
-    secondIcon.style.display = nowDark ? 'block' : 'none'
-  }
+  firstIcon.classList.toggle('hidden', nowDark);
+  secondIcon.classList.toggle('hidden', !nowDark);
+}
 
   // animate lights/scene for the selected theme
   applyThemeToScene(nowDark);

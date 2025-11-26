@@ -132,3 +132,9 @@
 /* subtle transitions */
 body, :root { transition: background-color .35s ease, color .35s ease; }
 .modal, .theme-mode-toggle-button, .audio-toggle { transition: background .35s ease, border-color .35s ease; }
+
+
+/* Icons */
+.ion-icon{
+  color: #fff;
+}

@@ -1,75 +1,148 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <link rel="icon" href="images/favicon.png" type="image/x-icon">
-  <title>Shrinath's ParkFolio</title>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <link rel="icon" href="images/favicon.png" type="image/x-icon" />
+    <title>Shrinath's ParkFolio</title>
 
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400..700&display=swap" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400..700&display=swap"
+      rel="stylesheet"
+    />
 
-  <link rel="stylesheet" href="/src/style.css">
-</head>
-<body>
+    <link rel="stylesheet" href="/src/style.css" />
+  </head>
+  <body>
+    <div id="experience">
+      <canvas id="webglCanvas" class="webgl" tabindex="0"></canvas>
+    </div>
 
-  <div id="experience">
-    <canvas id="webglCanvas" class="webgl" tabindex="0"></canvas>
-  </div>
-
-  <!-- Loading Screen -->
-  <div class="loading-screen" id="loadingScreen" role="status" aria-live="polite">
-    <div class="loading-text">Loading...</div>
-    <button class="enter-button" id="enterButton" type="button" aria-label="Enter Park">Enter Park!</button>
-    <div class="instructions">~ use WASD / arrows to move ~ <br>~ R to respawn ~</div>
-  </div>
-
-  <!-- Audio toggle -->
-  <button class="audio-toggle" id="audioToggle" aria-label="Toggle audio">
-    <span class="audio-on">🔊</span>
-    <span class="audio-off hidden">🔇</span>
-  </button>
-
-  <!-- Theme toggle -->
-  <div class="theme-mode-toggle-button" id="themeToggle" title="Toggle theme">
-    <svg width="46" height="46" class="first-icon" xmlns="http://www.w3.org/2000/svg"><rect x="1" y="11" width="24" height="24" fill="white"/></svg>
-    <svg width="46" height="46" class="second-icon hidden" xmlns="http://www.w3.org/2000/svg"><path d="M0 0h46v46H0z" fill="white"/></svg>
-  </div>
-
-  <!-- Modal backdrop + Modal -->
-  <div class="modal-bg-overlay hidden"></div>
-
-  <div class="modal hidden" id="modal" role="dialog" aria-modal="true" aria-hidden="true" aria-labelledby="modalTitle">
-    <div class="modal-wrapper">
-      <div class="modal-header">
-        <h1 id="modalTitle" class="modal-title">project one</h1>
-        <button class="modal-exit-button" id="modalExit" aria-label="Close modal">exit</button>
+    <!-- Loading Screen -->
+    <div
+      class="loading-screen"
+      id="loadingScreen"
+      role="status"
+      aria-live="polite"
+    >
+      <div class="loading-text">Loading...</div>
+      <button
+        class="enter-button"
+        id="enterButton"
+        type="button"
+        aria-label="Enter Park"
+      >
+        Enter Park!
+      </button>
+      <div class="instructions">
+        ~ use WASD / arrows to move ~ <br />~ R to respawn ~
       </div>
+    </div>
 
-      <div class="modal-content">
-        <div class="modal-content-wrapper">
-          <img class="modal-img" id="modalImg" src="/images/asteroidShooter.webp" alt="project preview" />
-          <p class="modal-project-description" id="modalDesc">Description...</p>
-          <a href="#" target="_blank" rel="noopener noreferrer" class="modal-project-visit-button hidden" id="modalVisit">View Project</a>
+    <!-- Audio toggle -->
+    <button class="audio-toggle" id="audioToggle" aria-label="Toggle audio">
+      <span class="audio-on"><ion-icon class="ion-icon" name="volume-high"></ion-icon></span>
+      <span class="audio-off hidden"><ion-icon class="ion-icon" name="volume-mute"></ion-icon></span>
+    </button>
+
+    <!-- Theme toggle -->
+    <div class="theme-mode-toggle-button" id="themeToggle" title="Toggle theme">
+      <ion-icon class="ion-icon first-icon" name="sunny"></ion-icon>
+      <ion-icon class="ion-icon second-icon hidden" name="moon"></ion-icon>
+    </div>
+
+    <!-- Modal backdrop + Modal -->
+    <div class="modal-bg-overlay hidden"></div>
+
+    <div
+      class="modal hidden"
+      id="modal"
+      role="dialog"
+      aria-modal="true"
+      aria-hidden="true"
+      aria-labelledby="modalTitle"
+    >
+      <div class="modal-wrapper">
+        <div class="modal-header">
+          <h1 id="modalTitle" class="modal-title">project one</h1>
+          <button
+            class="modal-exit-button"
+            id="modalExit"
+            aria-label="Close modal"
+          >
+            exit
+          </button>
+        </div>
+
+        <div class="modal-content">
+          <div class="modal-content-wrapper">
+            <img
+              class="modal-img"
+              id="modalImg"
+              src="/images/asteroidShooter.webp"
+              alt="project preview"
+            />
+            <p class="modal-project-description" id="modalDesc">
+              Description...
+            </p>
+            <a
+              href="#"
+              target="_blank"
+              rel="noopener noreferrer"
+              class="modal-project-visit-button hidden"
+              id="modalVisit"
+              >View Project</a
+            >
+          </div>
         </div>
       </div>
     </div>
-  </div>
 
-  <!-- Mobile controls -->
-  <div class="mobile-controls-container hidden" id="mobileControlsContainer">
-    <div class="mobile-control up-arrow" role="button" aria-label="Move up">▲</div>
-    <div class="mobile-control left-arrow" role="button" aria-label="Move left">◀</div>
-    <div class="mobile-control right-arrow" role="button" aria-label="Move right">▶</div>
-    <div class="mobile-control down-arrow" role="button" aria-label="Move down">▼</div>
-  </div>
+    <!-- Mobile controls -->
+    <div class="mobile-controls-container hidden" id="mobileControlsContainer">
+      <div class="mobile-control up-arrow" role="button" aria-label="Move up">
+        ▲
+      </div>
+      <div
+        class="mobile-control left-arrow"
+        role="button"
+        aria-label="Move left"
+      >
+        ◀
+      </div>
+      <div
+        class="mobile-control right-arrow"
+        role="button"
+        aria-label="Move right"
+      >
+        ▶
+      </div>
+      <div
+        class="mobile-control down-arrow"
+        role="button"
+        aria-label="Move down"
+      >
+        ▼
+      </div>
+    </div>
 
-  <!-- Libs -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/howler/2.2.4/howler.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js"></script>
+    <!-- Libs -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/howler/2.2.4/howler.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js"></script>
 
-  <!-- Main -->
-  <script type="module" src="/src/main.js"></script>
-</body>
+    <!-- Ion-Icons -->
+    <script
+      type="module"
+      src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.esm.js"
+    ></script>
+    <script
+      nomodule
+      src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.js"
+    ></script>
+
+    <!-- Main -->
+    <script type="module" src="/src/main.js"></script>
+  </body>
 </html>
